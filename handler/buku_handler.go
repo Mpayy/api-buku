@@ -9,9 +9,15 @@ import (
 )
 
 type Book struct {
-	ID     int
-	Title  string
-	Author string
+	ID     int    `json:"id"`
+	Title  string `json:"title"`
+	Author string `json:"author"`
+}
+
+type Response struct {
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
 }
 
 var books []Book
@@ -21,11 +27,20 @@ func GetAllBooks(writer http.ResponseWriter, request *http.Request) {
 	if len(books) == 0 {
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(writer).Encode("Book Not found")
+		encoder := json.NewEncoder(writer)
+		_ = encoder.Encode(&Response{
+			Status:  "error",
+			Message: "No books found",
+		})
 		return
 	}
 	writer.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(writer).Encode(books)
+	encoder := json.NewEncoder(writer)
+	_ = encoder.Encode(&Response{
+		Status:  "success",
+		Message: "All books found",
+		Data:    books,
+	})
 }
 
 func GetBookByID(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
@@ -33,8 +48,12 @@ func GetBookByID(writer http.ResponseWriter, request *http.Request, params httpr
 	id, err := strconv.Atoi(idBook)
 	if err != nil {
 		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(writer).Encode("Book Not found")
+		writer.WriteHeader(http.StatusBadRequest)
+		encoder := json.NewEncoder(writer)
+		_ = encoder.Encode(&Response{
+			Status:  "error",
+			Message: "Invalid Book ID",
+		})
 		return
 	}
 
@@ -42,31 +61,49 @@ func GetBookByID(writer http.ResponseWriter, request *http.Request, params httpr
 		if book.ID == id {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
-			json.NewEncoder(writer).Encode(book)
+			encoder := json.NewEncoder(writer)
+			_ = encoder.Encode(&Response{
+				Status:  "success",
+				Message: "Book found",
+				Data:    book,
+			})
 			return
 		}
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(writer).Encode("Book Not found")
+	encoder := json.NewEncoder(writer)
+	_ = encoder.Encode(&Response{
+		Status:  "error",
+		Message: "No books found",
+	})
 }
 
 func CreateBook(writer http.ResponseWriter, request *http.Request) {
 	var book Book
 
-	err := json.NewDecoder(request.Body).Decode(&book)
+	decoder := json.NewDecoder(request.Body)
+	err := decoder.Decode(&book)
 	if err != nil {
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "body kosong"})
+		encoder := json.NewEncoder(writer)
+		_ = encoder.Encode(&Response{
+			Status:  "error",
+			Message: "Invalid format body",
+		})
 		return
 	}
 
 	if book.Title == "" || book.Author == "" {
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(writer).Encode(map[string]string{"error": "title dan author wajib diisi"})
+		encoder := json.NewEncoder(writer)
+		_ = encoder.Encode(&Response{
+			Status:  "error",
+			Message: "title and author cannot be empty",
+		})
 		return
 	}
 
@@ -76,7 +113,12 @@ func CreateBook(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(book)
+	encoder := json.NewEncoder(writer)
+	_ = encoder.Encode(&Response{
+		Status:  "success",
+		Message: "Created book",
+		Data:    books,
+	})
 }
 
 func DeleteBookByID(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
@@ -84,8 +126,12 @@ func DeleteBookByID(writer http.ResponseWriter, request *http.Request, params ht
 	id, err := strconv.Atoi(idBook)
 	if err != nil {
 		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(writer).Encode("Book Not found")
+		writer.WriteHeader(http.StatusBadRequest)
+		encoder := json.NewEncoder(writer)
+		_ = encoder.Encode(&Response{
+			Status:  "error",
+			Message: "Invalid Book ID",
+		})
 		return
 	}
 
@@ -94,11 +140,19 @@ func DeleteBookByID(writer http.ResponseWriter, request *http.Request, params ht
 			books = append(books[:i], books[i+1:]...)
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
-			json.NewEncoder(writer).Encode("success delete book")
+			encoder := json.NewEncoder(writer)
+			_ = encoder.Encode(&Response{
+				Status:  "success",
+				Message: "Book deleted",
+			})
 			return
 		}
 	}
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(writer).Encode("Book Not found")
+	encoder := json.NewEncoder(writer)
+	_ = encoder.Encode(&Response{
+		Status:  "error",
+		Message: "No books found",
+	})
 }
